@@ -18,6 +18,9 @@
     --present:#2f7d53;      /* 출석 */
     --late:#c9862b;         /* 지각 */
     --absent:#c0483f;       /* 결석 */
+    --done:#2f7d53;         /* 과제 완료 */
+    --doing:#c9862b;        /* 과제 진행중 */
+    --todo:#b0483f;         /* 과제 미제출 */
     --amber-soft:#faf1e0;
     --red-soft:#fbeceb;
     --shadow:0 1px 2px rgba(22,36,29,.06), 0 8px 24px rgba(22,36,29,.06);
@@ -160,6 +163,41 @@
   .t-absent{color:var(--absent)} .t-absent .sq{background:var(--absent)}
   .t-none{color:#b6b2a5} .t-none .sq{background:#d6d3c8}
 
+  /* ===== 과제 카드 리스트 ===== */
+  .asg-item{
+    border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;
+    cursor:pointer;transition:border-color .15s,background .15s;
+  }
+  .asg-item:last-child{margin-bottom:0}
+  .asg-item:hover{border-color:var(--sprout);background:#faf9f4}
+  .asg-item.selected{border-color:var(--sprout);background:var(--sprout-soft)}
+  .asg-item .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .asg-item .title{font-weight:700;font-size:15px}
+  .asg-item .desc{font-size:13px;color:var(--bark);margin-top:3px}
+  .asg-item .due{font-size:12.5px;font-weight:700;white-space:nowrap}
+  .due-ok{color:var(--sprout-deep)} .due-soon{color:var(--late)} .due-over{color:var(--absent)}
+  .asg-progress{margin-top:10px}
+  .asg-bar{height:7px;border-radius:99px;background:#eceae0;overflow:hidden}
+  .asg-bar span{display:block;height:100%;background:var(--sprout);border-radius:99px;transition:width .3s}
+  .asg-progress .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--bark);margin-top:5px;font-weight:600}
+  .asg-del{border:none;background:var(--red-soft);color:var(--absent);font-family:inherit;font-weight:700;
+    font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer}
+  .asg-del:hover{background:#f7dcda}
+  .asg-meta{font-size:13px;color:var(--bark);margin:-6px 0 16px;font-weight:600}
+
+  .asg-btn{
+    font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+    border:1.5px solid var(--line);background:#fff;color:var(--bark);
+    padding:6px 12px;border-radius:8px;transition:all .12s;
+  }
+  .asg-btn:hover{border-color:var(--sprout)}
+  .asg-btn.on-done{background:var(--sprout-soft);border-color:var(--done);color:var(--done)}
+  .asg-btn.on-doing{background:var(--amber-soft);border-color:var(--doing);color:var(--doing)}
+  .asg-btn.on-todo{background:var(--red-soft);border-color:var(--todo);color:var(--todo)}
+  .t-done{color:var(--done)} .t-done .sq{background:var(--done)}
+  .t-doing{color:var(--doing)} .t-doing .sq{background:var(--doing)}
+  .t-todo{color:var(--todo)} .t-todo .sq{background:var(--todo)}
+
   /* ===== 점수 입력 ===== */
   .score-input{width:90px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;text-align:center}
   .score-input:focus{outline:none;border-color:var(--sprout);box-shadow:0 0 0 3px rgba(47,125,83,.12)}
@@ -217,6 +255,7 @@
   <div class="header-stats">
     <div class="hs"><div class="num" id="hsStudents">0</div><div class="lbl">등록 학생</div></div>
     <div class="hs"><div class="num" id="hsToday">0</div><div class="lbl">오늘 출석</div></div>
+    <div class="hs"><div class="num" id="hsAsg">0</div><div class="lbl">등록 과제</div></div>
     <div class="hs"><div class="num" id="hsTests">0</div><div class="lbl">누적 성적</div></div>
   </div>
 </header>
@@ -226,6 +265,7 @@
   <button class="tab-btn active" data-view="dashboard">현황 요약</button>
   <button class="tab-btn" data-view="students">학생 관리</button>
   <button class="tab-btn" data-view="attendance">출결 체크</button>
+  <button class="tab-btn" data-view="assignments">과제 관리</button>
   <button class="tab-btn" data-view="scores">테스트 결과</button>
 </nav>
 
@@ -242,7 +282,7 @@
       <h3><span class="dot"></span>학생별 요약</h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>오늘 출결</th><th>응시 횟수</th><th>평균 점수</th></tr></thead>
+          <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>오늘 출결</th><th>과제 완료</th><th>응시 횟수</th><th>평균 점수</th></tr></thead>
           <tbody id="dashBody"></tbody>
         </table>
       </div>
@@ -334,6 +374,53 @@
     </div>
   </section>
 
+  <!-- ===== 과제 관리 ===== -->
+  <section class="view" id="view-assignments">
+    <div class="section-head">
+      <h2>과제 관리</h2>
+      <p>과제를 등록하고, 과제별로 학생들의 수행 여부를 체크합니다.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3><span class="dot"></span>과제 등록</h3>
+        <div class="field">
+          <label for="aTitle">과제명</label>
+          <input id="aTitle" type="text" placeholder="예) 수학 3단원 문제집 20p" maxlength="50">
+        </div>
+        <div class="field">
+          <label for="aDue">마감일</label>
+          <input id="aDue" type="date">
+        </div>
+        <div class="field">
+          <label for="aDesc">안내 사항 (선택)</label>
+          <input id="aDesc" type="text" placeholder="예) 틀린 문제는 오답노트까지" maxlength="80">
+        </div>
+        <button class="btn btn-primary" onclick="addAssignment()">과제 등록하기</button>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot"></span>과제 목록 <span id="asgCount" style="color:var(--bark);font-weight:600;font-size:13px"></span></h3>
+        <div id="asgList"></div>
+        <div class="empty" id="asgEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+          <p>등록된 과제가 없습니다.</p>
+          <p class="hint">왼쪽 양식으로 첫 과제를 등록해 주세요.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="asgCheckCard" style="margin-top:20px;display:none">
+      <h3><span class="dot"></span>수행 체크 · <span id="asgCheckTitle" style="color:var(--sprout-deep)"></span></h3>
+      <div class="asg-meta" id="asgCheckMeta"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>수행 상태</th><th>기록</th></tr></thead>
+          <tbody id="asgCheckBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== 테스트 결과 ===== -->
   <section class="view" id="view-scores">
     <div class="section-head">
@@ -396,14 +483,21 @@ const DB = {
   students: JSON.parse(localStorage.getItem('tium_students') || '[]'),
   attendance: JSON.parse(localStorage.getItem('tium_attendance') || '{}'),
   scores: JSON.parse(localStorage.getItem('tium_scores') || '[]'),
+  assignments: JSON.parse(localStorage.getItem('tium_assignments') || '[]'),
+  // asgStatus: { assignmentId: { studentId: 'done|doing|todo' } }
+  asgStatus: JSON.parse(localStorage.getItem('tium_asgStatus') || '{}'),
   save(){
     localStorage.setItem('tium_students', JSON.stringify(this.students));
     localStorage.setItem('tium_attendance', JSON.stringify(this.attendance));
     localStorage.setItem('tium_scores', JSON.stringify(this.scores));
+    localStorage.setItem('tium_assignments', JSON.stringify(this.assignments));
+    localStorage.setItem('tium_asgStatus', JSON.stringify(this.asgStatus));
   }
 };
 
 const ATT_LABEL = {present:'출석', late:'지각', absent:'결석'};
+const ASG_LABEL = {done:'완료', doing:'진행중', todo:'미제출'};
+let selectedAsgId = null;  // 현재 체크 중인 과제
 
 /* ===== 유틸 ===== */
 function todayStr(){
@@ -540,6 +634,149 @@ function renderAttendance(){
   }).join('');
 }
 
+/* ===== 과제 관리 ===== */
+function addAssignment(){
+  const title = document.getElementById('aTitle').value.trim();
+  const due = document.getElementById('aDue').value;
+  const desc = document.getElementById('aDesc').value.trim();
+  if(!title){ toast('과제명을 입력해 주세요.'); document.getElementById('aTitle').focus(); return; }
+  const id = uid();
+  DB.assignments.push({ id, title, due: due || '', desc, createdAt: todayStr() });
+  DB.asgStatus[id] = {};
+  DB.save();
+  document.getElementById('aTitle').value = '';
+  document.getElementById('aDesc').value = '';
+  document.getElementById('aTitle').focus();
+  toast('과제가 등록되었습니다.');
+  selectedAsgId = id;   // 등록 즉시 체크 화면으로 연결
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+function deleteAssignment(id, ev){
+  if(ev) ev.stopPropagation();
+  const a = DB.assignments.find(x=>x.id===id);
+  if(!a) return;
+  if(!confirm(`'${a.title}' 과제를 삭제하시겠습니까?\n학생들의 수행 기록도 함께 삭제됩니다.`)) return;
+  DB.assignments = DB.assignments.filter(x=>x.id!==id);
+  delete DB.asgStatus[id];
+  if(selectedAsgId===id) selectedAsgId = null;
+  DB.save();
+  toast('과제가 삭제되었습니다.');
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+function selectAssignment(id){
+  selectedAsgId = id;
+  renderAssignments();
+  renderAsgCheck();
+}
+
+function setAsgStatus(asgId, studentId, status){
+  if(!DB.asgStatus[asgId]) DB.asgStatus[asgId] = {};
+  if(DB.asgStatus[asgId][studentId] === status){
+    delete DB.asgStatus[asgId][studentId];  // 다시 누르면 해제
+  } else {
+    DB.asgStatus[asgId][studentId] = status;
+  }
+  DB.save();
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+// 과제 진행률 계산 (완료 학생 수 / 전체 학생 수)
+function asgProgress(asgId){
+  const total = DB.students.length;
+  if(total===0) return {done:0, total:0, pct:0};
+  const map = DB.asgStatus[asgId] || {};
+  const done = DB.students.filter(s=>map[s.id]==='done').length;
+  return {done, total, pct: Math.round(done/total*100)};
+}
+
+// 마감일 상태 (여유/임박/지남)
+function dueClass(due){
+  if(!due) return {cls:'due-ok', txt:'마감일 없음'};
+  const today = todayStr();
+  const diff = (new Date(due) - new Date(today)) / 86400000;
+  if(diff < 0) return {cls:'due-over', txt:`마감 지남 (${fmtDate(due)})`};
+  if(diff <= 2) return {cls:'due-soon', txt:`마감 임박 · ${fmtDate(due)}`};
+  return {cls:'due-ok', txt:`마감 ${fmtDate(due)}`};
+}
+
+function renderAssignments(){
+  const list = document.getElementById('asgList');
+  const empty = document.getElementById('asgEmpty');
+  document.getElementById('asgCount').textContent = DB.assignments.length ? `· 총 ${DB.assignments.length}건` : '';
+  if(DB.assignments.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const sorted = [...DB.assignments].sort((a,b)=> (b.createdAt+b.id).localeCompare(a.createdAt+a.id));
+  list.innerHTML = sorted.map(a=>{
+    const p = asgProgress(a.id);
+    const d = dueClass(a.due);
+    return `
+    <div class="asg-item ${selectedAsgId===a.id?'selected':''}" onclick="selectAssignment('${a.id}')">
+      <div class="top">
+        <div>
+          <div class="title">${esc(a.title)}</div>
+          ${a.desc ? `<div class="desc">${esc(a.desc)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <span class="due ${d.cls}">${d.txt}</span>
+          <button class="asg-del" onclick="deleteAssignment('${a.id}',event)">삭제</button>
+        </div>
+      </div>
+      <div class="asg-progress">
+        <div class="asg-bar"><span style="width:${p.pct}%"></span></div>
+        <div class="lbl"><span>완료 ${p.done} / ${p.total}명</span><span>${p.pct}%</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAsgCheck(){
+  const card = document.getElementById('asgCheckCard');
+  if(!selectedAsgId || !DB.assignments.find(a=>a.id===selectedAsgId)){
+    card.style.display='none';
+    return;
+  }
+  const a = DB.assignments.find(x=>x.id===selectedAsgId);
+  card.style.display='block';
+  document.getElementById('asgCheckTitle').textContent = a.title;
+  const p = asgProgress(a.id);
+  const d = dueClass(a.due);
+  document.getElementById('asgCheckMeta').textContent =
+    `${d.txt}　·　완료 ${p.done} / ${p.total}명 (${p.pct}%)`;
+
+  const body = document.getElementById('asgCheckBody');
+  if(DB.students.length===0){
+    body.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--bark);padding:24px">등록된 학생이 없습니다. 먼저 학생을 등록해 주세요.</td></tr>`;
+    return;
+  }
+  const map = DB.asgStatus[a.id] || {};
+  body.innerHTML = DB.students.map(s=>{
+    const cur = map[s.id] || '';
+    const tagCls = cur ? 't-'+cur : 't-none';
+    const tagTxt = cur ? ASG_LABEL[cur] : '미확인';
+    return `
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td>
+        <div class="att-group">
+          <button class="asg-btn ${cur==='done'?'on-done':''}" onclick="setAsgStatus('${a.id}','${s.id}','done')">완료</button>
+          <button class="asg-btn ${cur==='doing'?'on-doing':''}" onclick="setAsgStatus('${a.id}','${s.id}','doing')">진행중</button>
+          <button class="asg-btn ${cur==='todo'?'on-todo':''}" onclick="setAsgStatus('${a.id}','${s.id}','todo')">미제출</button>
+        </div>
+      </td>
+      <td><span class="status-tag ${tagCls}"><span class="sq"></span>${tagTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
 /* ===== 테스트 결과 ===== */
 function renderScoreInputs(){
   const body = document.getElementById('scoreInputBody');
@@ -617,6 +854,7 @@ function renderHeader(){
   const presentToday = Object.values(dayMap).filter(v=>v==='present').length;
   document.getElementById('hsStudents').textContent = DB.students.length;
   document.getElementById('hsToday').textContent = presentToday;
+  document.getElementById('hsAsg').textContent = DB.assignments.length;
   document.getElementById('hsTests').textContent = DB.scores.length;
 }
 
@@ -627,12 +865,18 @@ function renderDashboard(){
   const late = Object.values(dayMap).filter(v=>v==='late').length;
   const absent = Object.values(dayMap).filter(v=>v==='absent').length;
   const avg = DB.scores.length ? Math.round(DB.scores.reduce((a,s)=>a+s.score,0)/DB.scores.length) : 0;
+  // 진행 중 과제: 마감일이 안 지났거나 마감일 없는 과제
+  const ongoing = DB.assignments.filter(a=>{
+    if(!a.due) return true;
+    return (new Date(a.due) - new Date(today)) / 86400000 >= 0;
+  }).length;
 
   document.getElementById('statRow').innerHTML = `
     <div class="stat-card"><div class="bar" style="background:var(--sprout)"></div><div class="k">등록 학생</div><div class="v">${DB.students.length}<span class="u">명</span></div></div>
     <div class="stat-card"><div class="bar" style="background:var(--present)"></div><div class="k">오늘 출석</div><div class="v">${present}<span class="u">명</span></div></div>
     <div class="stat-card"><div class="bar" style="background:var(--late)"></div><div class="k">오늘 지각</div><div class="v">${late}<span class="u">명</span></div></div>
     <div class="stat-card"><div class="bar" style="background:var(--absent)"></div><div class="k">오늘 결석</div><div class="v">${absent}<span class="u">명</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:var(--doing)"></div><div class="k">진행 중 과제</div><div class="v">${ongoing}<span class="u">건</span></div></div>
     <div class="stat-card"><div class="bar" style="background:#3a7cae"></div><div class="k">전체 평균 점수</div><div class="v">${avg}<span class="u">점</span></div></div>
   `;
 
@@ -647,12 +891,19 @@ function renderDashboard(){
     const myScores = DB.scores.filter(x=>x.studentId===s.id);
     const cnt = myScores.length;
     const mAvg = cnt ? Math.round(myScores.reduce((a,x)=>a+x.score,0)/cnt) : null;
+    // 과제 완료 현황: 완료한 과제 수 / 전체 과제 수
+    const asgTotal = DB.assignments.length;
+    const asgDone = DB.assignments.filter(a => (DB.asgStatus[a.id]||{})[s.id]==='done').length;
+    const asgCell = asgTotal
+      ? `<span class="score-badge ${asgDone===asgTotal?'grade-A':(asgDone===0?'grade-D':'grade-C')}">${asgDone}/${asgTotal}</span>`
+      : '<span class="sub-cell">-</span>';
     return `
     <tr>
       <td class="name-cell">${esc(s.name)}</td>
       <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
       <td class="sub-cell">${esc(s.school)}</td>
       <td><span class="status-tag ${tagCls}"><span class="sq"></span>${tagTxt}</span></td>
+      <td>${asgCell}</td>
       <td class="sub-cell">${cnt}회</td>
       <td>${mAvg!==null ? `<span class="score-badge ${gradeInfo(mAvg).cls}">${mAvg}점</span>` : '<span class="sub-cell">-</span>'}</td>
     </tr>`;
@@ -664,6 +915,8 @@ function renderAll(){
   renderHeader();
   renderStudents();
   renderAttendance();
+  renderAssignments();
+  renderAsgCheck();
   renderScoreInputs();
   renderScoreList();
   renderDashboard();
@@ -672,9 +925,14 @@ function renderAll(){
 /* ===== 초기화 ===== */
 document.getElementById('attDate').value = todayStr();
 document.getElementById('testDate').value = todayStr();
+document.getElementById('aDue').value = todayStr();
 // 엔터로 학생 등록
 ['sName','sSchool'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addStudent(); });
+});
+// 엔터로 과제 등록
+['aTitle','aDesc'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addAssignment(); });
 });
 renderAll();
 </script>
