@@ -7,7 +7,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  /* ===== 로그인 화면 ===== */
+  #loginScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+    background:#16241d;padding:20px}
+  .login-box{background:#fff;border-radius:20px;padding:36px 30px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+  .login-logo img{height:52px;width:auto;margin-bottom:6px}
+  .login-sub{color:#8a7a63;font-size:13px;font-weight:600;margin-bottom:24px}
+  .login-tabs{display:flex;gap:6px;background:#f1efe8;padding:5px;border-radius:12px;margin-bottom:22px}
+  .login-tabs .ltab{flex:1;border:none;background:none;font-family:inherit;font-size:14px;font-weight:700;
+    color:#8a7a63;padding:10px;border-radius:8px;cursor:pointer;transition:all .15s}
+  .login-tabs .ltab.active{background:#fff;color:#2f7d53;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .login-form .field{text-align:left;margin-bottom:14px}
+  .login-form label{display:block;font-size:13px;font-weight:700;color:#16241d;margin-bottom:6px}
+  .login-form input{width:100%;padding:12px 14px;font-family:inherit;font-size:15px;
+    border:1.5px solid #e6e4da;border-radius:10px;background:#fff}
+  .login-form input:focus{outline:none;border-color:#2f7d53;box-shadow:0 0 0 3px rgba(47,125,83,.12)}
+  .login-form .btn-primary{width:100%;margin-top:6px;padding:13px}
+  .login-msg{font-size:13px;font-weight:600;color:#c0483f;margin-top:14px;min-height:18px}
+  .login-status{font-size:12px;color:#b6b2a5;margin-top:10px}
+  .header-user{display:flex;align-items:center;gap:12px;margin-left:16px}
+  #currentUser{color:#fff;font-size:13px;font-weight:600}
+  .logout-btn{border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;
+    font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;transition:all .15s}
+  .logout-btn:hover{background:rgba(255,255,255,.2)}
+
   /* ===== 디자인 토큰 ===== */
   :root{
     --ink:#16241d;          /* 짙은 숲 그린 (본문 텍스트) */
@@ -141,6 +167,7 @@
     font-size:12px;font-weight:700;letter-spacing:.2px;
   }
   .pill-grade{background:var(--sprout-soft);color:var(--sprout-deep)}
+  .code-badge{font-family:monospace;font-weight:800;letter-spacing:1px;background:#f1efe8;padding:3px 9px;border-radius:6px;color:#5f5e5a}
 
   /* ===== 출결 상태 버튼 ===== */
   .att-group{display:inline-flex;gap:6px;flex-wrap:wrap}
@@ -301,6 +328,51 @@
 </head>
 <body>
 
+<!-- ===== 로그인 화면 ===== -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="data:image/png;base64,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" alt="티움스터디">
+    </div>
+    <p class="login-sub">통합 학생 관리 시스템</p>
+
+    <div class="login-tabs">
+      <button class="ltab active" data-role="student" onclick="switchLoginRole('student')">학생</button>
+      <button class="ltab" data-role="teacher" onclick="switchLoginRole('teacher')">선생님</button>
+    </div>
+
+    <div id="studentLogin" class="login-form">
+      <div class="field">
+        <label for="loginName">이름</label>
+        <input id="loginName" type="text" placeholder="이름을 입력하세요" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="loginCode">코드 (4자리)</label>
+        <input id="loginCode" type="text" inputmode="numeric" maxlength="4" placeholder="숫자 4자리" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="doStudentLogin()">로그인</button>
+    </div>
+
+    <div id="teacherLogin" class="login-form" style="display:none">
+      <div class="field">
+        <label for="loginTName">이름</label>
+        <input id="loginTName" type="text" placeholder="선생님 이름" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="loginTCode">선생님 코드</label>
+        <input id="loginTCode" type="password" placeholder="관리자 코드" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="doTeacherLogin()">관리자 로그인</button>
+    </div>
+
+    <p class="login-msg" id="loginMsg"></p>
+    <p class="login-status" id="loginStatus">서버 연결 중…</p>
+  </div>
+</div>
+
+<!-- 메인 앱 (로그인 후 표시) -->
+<div id="appScreen" style="display:none">
+
 <!-- 헤더 -->
 <header>
   <div class="brand">
@@ -310,11 +382,15 @@
       <p>출결 · 과제 · 테스트 결과 관리 시스템</p>
     </div>
   </div>
-  <div class="header-stats">
+  <div class="header-stats" id="headerStats">
     <div class="hs"><div class="num" id="hsStudents">0</div><div class="lbl">등록 학생</div></div>
     <div class="hs"><div class="num" id="hsToday">0</div><div class="lbl">오늘 출석</div></div>
     <div class="hs"><div class="num" id="hsAsg">0</div><div class="lbl">등록 과제</div></div>
     <div class="hs"><div class="num" id="hsTests">0</div><div class="lbl">누적 성적</div></div>
+  </div>
+  <div class="header-user">
+    <span id="currentUser"></span>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
 </header>
 
@@ -385,6 +461,10 @@
           <label for="sSchool">학교</label>
           <input id="sSchool" type="text" placeholder="예) 티움중학교" maxlength="30">
         </div>
+        <div class="field">
+          <label for="sCode">로그인 코드 (4자리 숫자)</label>
+          <input id="sCode" type="text" inputmode="numeric" maxlength="4" placeholder="예) 1234">
+        </div>
         <button class="btn btn-primary" onclick="addStudent()">학생 등록하기</button>
       </div>
 
@@ -392,7 +472,7 @@
         <h3><span class="dot"></span>학생 명단 <span id="stuCount" style="color:var(--bark);font-weight:600;font-size:13px"></span></h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>등록일</th><th style="text-align:right">관리</th></tr></thead>
+            <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>코드</th><th style="text-align:right">관리</th></tr></thead>
             <tbody id="studentBody"></tbody>
           </table>
         </div>
@@ -634,37 +714,89 @@
 
 </main>
 
-<footer>티움스터디 통합 학생 관리 시스템 · 모든 데이터는 사용 중인 브라우저에만 안전하게 저장됩니다</footer>
+<footer>티움스터디 통합 학생 관리 시스템 · 데이터는 안전한 서버에 저장됩니다</footer>
+
+</div><!-- appScreen 끝 -->
 
 <div id="toast"></div>
 
 <script>
+/* ===== Supabase 설정 ===== */
+const SUPABASE_URL = 'https://xevyhxqfxjeizjbxrcyi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_PaVA6QeBPHofitjLtVIiag_pwcB2ciT';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ===== 로그인 상태 ===== */
+// role: 'teacher' | 'student', studentId: 학생일 때 본인 id
+let AUTH = { role:null, name:null, studentId:null };
+
 /* =========================================================
-   데이터 저장소 (localStorage 기반)
-   students : [{id, name, grade, school, createdAt}]
-   attendance : { "YYYY-MM-DD": { studentId: "present|late|absent" } }
-   scores : [{id, studentId, testName, date, score}]
+   데이터 저장소 — 서버(Supabase)에서 불러오고 통째로 저장
+   메모리에 두고 화면을 그리며, save() 때 서버에 반영
 ========================================================= */
 const DB = {
-  students: JSON.parse(localStorage.getItem('tium_students') || '[]'),
-  attendance: JSON.parse(localStorage.getItem('tium_attendance') || '{}'),
-  scores: JSON.parse(localStorage.getItem('tium_scores') || '[]'),
-  assignments: JSON.parse(localStorage.getItem('tium_assignments') || '[]'),
-  // asgStatus: { assignmentId: { studentId: 'done|doing|todo' } }
-  asgStatus: JSON.parse(localStorage.getItem('tium_asgStatus') || '{}'),
-  // planner: { studentId: { slots:[라벨...], cells:{ "dayIdx_slotIdx": text } } }
-  planner: JSON.parse(localStorage.getItem('tium_planner') || '{}'),
-  // study: [{id, studentId, date:"YYYY-MM-DD", subject, minutes}]
-  study: JSON.parse(localStorage.getItem('tium_study') || '[]'),
-  save(){
-    localStorage.setItem('tium_students', JSON.stringify(this.students));
-    localStorage.setItem('tium_attendance', JSON.stringify(this.attendance));
-    localStorage.setItem('tium_scores', JSON.stringify(this.scores));
-    localStorage.setItem('tium_assignments', JSON.stringify(this.assignments));
-    localStorage.setItem('tium_asgStatus', JSON.stringify(this.asgStatus));
-    localStorage.setItem('tium_planner', JSON.stringify(this.planner));
-    localStorage.setItem('tium_study', JSON.stringify(this.study));
-  }
+  students: [],
+  attendance: {},   // { "YYYY-MM-DD": { studentId: status } }
+  scores: [],
+  assignments: [],
+  asgStatus: {},    // { assignmentId: { studentId: status } }
+  planner: {},      // { studentId: {slots, cells} }
+  study: [],        // [{id, studentId, date, subject, minutes}]
+  _loaded: false,
+
+  // 서버에서 전체 데이터 로드
+  async load(){
+    try{
+      const [stu, att, sc, asg, asgS, pl, st] = await Promise.all([
+        sb.from('students').select('*').order('created_at'),
+        sb.from('attendance').select('*'),
+        sb.from('scores').select('*'),
+        sb.from('assignments').select('*'),
+        sb.from('assignment_status').select('*'),
+        sb.from('planners').select('*'),
+        sb.from('study_logs').select('*')
+      ]);
+
+      this.students = (stu.data||[]).map(r=>({
+        id:r.id, name:r.name, grade:r.grade||'', school:r.school||'-', code:r.code, createdAt:(r.created_at||'').slice(0,10)
+      }));
+
+      this.attendance = {};
+      (att.data||[]).forEach(r=>{
+        if(!this.attendance[r.date]) this.attendance[r.date]={};
+        this.attendance[r.date][r.student_id]=r.status;
+      });
+
+      this.scores = (sc.data||[]).map(r=>({
+        id:r.id, studentId:r.student_id, testName:r.test_name, date:r.date, score:r.score
+      }));
+
+      this.assignments = (asg.data||[]).map(r=>({
+        id:r.id, title:r.title, due:r.due_date||'', desc:r.description||'', createdAt:(r.created_at||'').slice(0,10)
+      }));
+
+      this.asgStatus = {};
+      (asgS.data||[]).forEach(r=>{
+        if(!this.asgStatus[r.assignment_id]) this.asgStatus[r.assignment_id]={};
+        this.asgStatus[r.assignment_id][r.student_id]=r.status;
+      });
+
+      this.planner = {};
+      (pl.data||[]).forEach(r=>{ this.planner[r.student_id]=r.data||{slots:[...DEFAULT_SLOTS],cells:{}}; });
+
+      this.study = (st.data||[]).map(r=>({
+        id:r.id, studentId:r.student_id, date:r.date, subject:r.subject, minutes:r.minutes
+      }));
+
+      this._loaded = true;
+    }catch(e){
+      console.error('로드 실패', e);
+      toast('데이터를 불러오지 못했습니다. 인터넷을 확인해 주세요.');
+    }
+  },
+
+  // save는 개별 서버 함수들이 처리하므로 여기선 화면 갱신만
+  save(){ /* 서버 반영은 각 액션에서 개별 처리 */ }
 };
 
 // 과목별 색상 (누적 막대 그래프용) — 밝고 선명한 팔레트
@@ -730,30 +862,38 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 /* ===== 학생 관리 ===== */
-function addStudent(){
+async function addStudent(){
   const name = document.getElementById('sName').value.trim();
   const grade = document.getElementById('sGrade').value;
   const school = document.getElementById('sSchool').value.trim();
+  const code = document.getElementById('sCode').value.trim();
   if(!name){ toast('이름을 입력해 주세요.'); document.getElementById('sName').focus(); return; }
   if(!grade){ toast('학년을 선택해 주세요.'); document.getElementById('sGrade').focus(); return; }
-  DB.students.push({ id:uid(), name, grade, school: school || '-', createdAt: todayStr() });
-  DB.save();
+  if(!/^\d{4}$/.test(code)){ toast('로그인 코드는 숫자 4자리로 입력해 주세요.'); document.getElementById('sCode').focus(); return; }
+  const { data, error } = await sb.from('students')
+    .insert({ name, grade, school: school||'-', code }).select().single();
+  if(error){ toast('등록 실패: '+error.message); return; }
+  DB.students.push({ id:data.id, name:data.name, grade:data.grade, school:data.school, code:data.code, createdAt:(data.created_at||'').slice(0,10) });
   document.getElementById('sName').value = '';
   document.getElementById('sGrade').value = '';
   document.getElementById('sSchool').value = '';
+  document.getElementById('sCode').value = '';
   document.getElementById('sName').focus();
   toast(`${name} 학생이 등록되었습니다.`);
   renderAll();
 }
 
-function deleteStudent(id){
+async function deleteStudent(id){
   const s = DB.students.find(x=>x.id===id);
   if(!s) return;
-  if(!confirm(`${s.name} 학생을 삭제하시겠습니까?\n관련 출결·성적 기록도 함께 삭제됩니다.`)) return;
+  if(!confirm(`${s.name} 학생을 삭제하시겠습니까?\n관련 출결·성적·과제 기록도 함께 삭제됩니다.`)) return;
+  const { error } = await sb.from('students').delete().eq('id', id);
+  if(error){ toast('삭제 실패: '+error.message); return; }
   DB.students = DB.students.filter(x=>x.id!==id);
   DB.scores = DB.scores.filter(x=>x.studentId!==id);
+  DB.study = DB.study.filter(x=>x.studentId!==id);
   Object.keys(DB.attendance).forEach(date=>{ delete DB.attendance[date][id]; });
-  DB.save();
+  delete DB.planner[id];
   toast(`${s.name} 학생이 삭제되었습니다.`);
   renderAll();
 }
@@ -769,32 +909,36 @@ function renderStudents(){
       <td class="name-cell">${esc(s.name)}</td>
       <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
       <td class="sub-cell">${esc(s.school)}</td>
-      <td class="sub-cell">${fmtDate(s.createdAt)}</td>
+      <td class="sub-cell"><span class="code-badge">${esc(s.code||'-')}</span></td>
       <td><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">삭제</button></div></td>
     </tr>`).join('');
 }
 
 /* ===== 출결 ===== */
-function setAttendance(studentId, status){
+async function setAttendance(studentId, status){
   const date = document.getElementById('attDate').value || todayStr();
   if(!DB.attendance[date]) DB.attendance[date] = {};
-  // 같은 상태 다시 누르면 해제(미기록)
   if(DB.attendance[date][studentId] === status){
+    // 해제: 서버에서 삭제
     delete DB.attendance[date][studentId];
+    await sb.from('attendance').delete().eq('student_id',studentId).eq('date',date);
   } else {
     DB.attendance[date][studentId] = status;
+    // upsert (있으면 갱신, 없으면 추가)
+    await sb.from('attendance').upsert({ student_id:studentId, date, status }, { onConflict:'student_id,date' });
   }
-  DB.save();
   renderAttendance();
   renderHeader();
 }
 
-function markAllPresent(){
+async function markAllPresent(){
   const date = document.getElementById('attDate').value || todayStr();
   if(DB.students.length===0){ toast('등록된 학생이 없습니다.'); return; }
   if(!DB.attendance[date]) DB.attendance[date] = {};
+  const rows = DB.students.map(s=>({ student_id:s.id, date, status:'present' }));
   DB.students.forEach(s=>{ DB.attendance[date][s.id] = 'present'; });
-  DB.save();
+  const { error } = await sb.from('attendance').upsert(rows, { onConflict:'student_id,date' });
+  if(error){ toast('저장 실패: '+error.message); return; }
   toast('전체 학생을 출석 처리했습니다.');
   renderAttendance();
   renderHeader();
@@ -829,34 +973,37 @@ function renderAttendance(){
 }
 
 /* ===== 과제 관리 ===== */
-function addAssignment(){
+async function addAssignment(){
   const title = document.getElementById('aTitle').value.trim();
   const due = document.getElementById('aDue').value;
   const desc = document.getElementById('aDesc').value.trim();
   if(!title){ toast('과제명을 입력해 주세요.'); document.getElementById('aTitle').focus(); return; }
-  const id = uid();
-  DB.assignments.push({ id, title, due: due || '', desc, createdAt: todayStr() });
+  const { data, error } = await sb.from('assignments')
+    .insert({ title, due_date: due||null, description: desc }).select().single();
+  if(error){ toast('등록 실패: '+error.message); return; }
+  const id = data.id;
+  DB.assignments.push({ id, title, due: due||'', desc, createdAt:(data.created_at||'').slice(0,10) });
   DB.asgStatus[id] = {};
-  DB.save();
   document.getElementById('aTitle').value = '';
   document.getElementById('aDesc').value = '';
   document.getElementById('aTitle').focus();
   toast('과제가 등록되었습니다.');
-  selectedAsgId = id;   // 등록 즉시 체크 화면으로 연결
+  selectedAsgId = id;
   renderAssignments();
   renderAsgCheck();
   renderHeader();
 }
 
-function deleteAssignment(id, ev){
+async function deleteAssignment(id, ev){
   if(ev) ev.stopPropagation();
   const a = DB.assignments.find(x=>x.id===id);
   if(!a) return;
   if(!confirm(`'${a.title}' 과제를 삭제하시겠습니까?\n학생들의 수행 기록도 함께 삭제됩니다.`)) return;
+  const { error } = await sb.from('assignments').delete().eq('id', id);
+  if(error){ toast('삭제 실패: '+error.message); return; }
   DB.assignments = DB.assignments.filter(x=>x.id!==id);
   delete DB.asgStatus[id];
   if(selectedAsgId===id) selectedAsgId = null;
-  DB.save();
   toast('과제가 삭제되었습니다.');
   renderAssignments();
   renderAsgCheck();
@@ -869,14 +1016,17 @@ function selectAssignment(id){
   renderAsgCheck();
 }
 
-function setAsgStatus(asgId, studentId, status){
+async function setAsgStatus(asgId, studentId, status){
   if(!DB.asgStatus[asgId]) DB.asgStatus[asgId] = {};
   if(DB.asgStatus[asgId][studentId] === status){
-    delete DB.asgStatus[asgId][studentId];  // 다시 누르면 해제
+    delete DB.asgStatus[asgId][studentId];
+    await sb.from('assignment_status').delete().eq('assignment_id',asgId).eq('student_id',studentId);
   } else {
     DB.asgStatus[asgId][studentId] = status;
+    await sb.from('assignment_status').upsert(
+      { assignment_id:asgId, student_id:studentId, status },
+      { onConflict:'assignment_id,student_id' });
   }
-  DB.save();
   renderAssignments();
   renderAsgCheck();
   renderHeader();
@@ -1039,19 +1189,27 @@ function renderPlanner(){
   wrap.innerHTML = html;
 }
 
+// 플래너 학생별 전체 저장 (서버)
+async function savePlanner(sid){
+  const plan = getPlan(sid);
+  await sb.from('planners').upsert(
+    { student_id:sid, data:plan, updated_at:new Date().toISOString() },
+    { onConflict:'student_id' });
+}
+
 function editPlanCell(sid, key, text){
   const plan = getPlan(sid);
   const clean = text.trim();
   if(clean) plan.cells[key] = clean;
   else delete plan.cells[key];
-  DB.save();
+  savePlanner(sid);
 }
 
 function editSlotLabel(sid, r, text){
   const plan = getPlan(sid);
   const clean = text.trim() || `시간 ${r+1}`;
   plan.slots[r] = clean;
-  DB.save();
+  savePlanner(sid);
 }
 
 function addPlanSlot(){
@@ -1059,7 +1217,7 @@ function addPlanSlot(){
   if(!sid) return;
   const plan = getPlan(sid);
   plan.slots.push('시간대 입력');
-  DB.save();
+  savePlanner(sid);
   renderPlanner();
 }
 
@@ -1068,16 +1226,15 @@ function delPlanSlot(sid, r){
   if(plan.slots.length<=1){ toast('최소 한 개의 시간대는 필요합니다.'); return; }
   if(!confirm('이 시간대 줄을 삭제하시겠습니까?')) return;
   plan.slots.splice(r,1);
-  // 해당 행 이후 셀 키 재정렬
   const newCells = {};
   Object.keys(plan.cells).forEach(key=>{
     const [c, row] = key.split('_').map(Number);
-    if(row === r) return;               // 삭제된 행
-    const nr = row > r ? row-1 : row;   // 아래 행 당기기
+    if(row === r) return;
+    const nr = row > r ? row-1 : row;
     newCells[c+'_'+nr] = plan.cells[key];
   });
   plan.cells = newCells;
-  DB.save();
+  savePlanner(sid);
   renderPlanner();
 }
 
@@ -1087,7 +1244,7 @@ function clearPlanner(){
   const s = DB.students.find(x=>x.id===sid);
   if(!confirm(`${s?s.name:'이 학생'}의 플래너 내용을 모두 비우시겠습니까?\n(시간대 틀은 기본값으로 돌아갑니다.)`)) return;
   DB.planner[sid] = { slots: [...DEFAULT_SLOTS], cells: {} };
-  DB.save();
+  savePlanner(sid);
   toast('플래너를 초기화했습니다.');
   renderPlanner();
 }
@@ -1127,7 +1284,7 @@ function currentStudent(){
   return sel ? sel.value : '';
 }
 
-function addStudyLog(){
+async function addStudyLog(){
   const sid = currentStudent();
   if(!sid){ toast('학생을 먼저 등록해 주세요.'); return; }
   const date = document.getElementById('stDate').value || todayStr();
@@ -1137,17 +1294,20 @@ function addStudyLog(){
   const minutes = h*60 + m;
   if(minutes<=0){ toast('공부 시간을 입력해 주세요.'); return; }
   if(minutes>24*60){ toast('하루 24시간을 넘을 수 없습니다.'); return; }
-  DB.study.push({ id:uid(), studentId:sid, date, subject, minutes });
-  DB.save();
+  const { data, error } = await sb.from('study_logs')
+    .insert({ student_id:sid, date, subject, minutes }).select().single();
+  if(error){ toast('저장 실패: '+error.message); return; }
+  DB.study.push({ id:data.id, studentId:sid, date, subject, minutes });
   document.getElementById('stHour').value='';
   document.getElementById('stMin').value='';
   toast(`${subject} ${fmtMin(minutes)} 기록 완료`);
   renderStudy();
 }
 
-function deleteStudyLog(id){
+async function deleteStudyLog(id){
+  const { error } = await sb.from('study_logs').delete().eq('id', id);
+  if(error){ toast('삭제 실패: '+error.message); return; }
   DB.study = DB.study.filter(x=>x.id!==id);
-  DB.save();
   toast('기록을 삭제했습니다.');
   renderStudy();
 }
@@ -1354,33 +1514,35 @@ function renderScoreInputs(){
     </tr>`).join('');
 }
 
-function saveScores(){
+async function saveScores(){
   const testName = document.getElementById('testName').value.trim();
   const date = document.getElementById('testDate').value || todayStr();
   if(!testName){ toast('시험명을 입력해 주세요.'); document.getElementById('testName').focus(); return; }
   if(DB.students.length===0){ toast('등록된 학생이 없습니다.'); return; }
   const inputs = document.querySelectorAll('#scoreInputBody .score-input');
-  let count = 0;
+  const rows = [];
   inputs.forEach(inp=>{
     const val = inp.value.trim();
-    if(val===''){ return; }
+    if(val==='') return;
     let score = Math.round(Number(val));
     if(isNaN(score)) return;
     score = Math.max(0, Math.min(100, score));
-    DB.scores.push({ id:uid(), studentId: inp.dataset.sid, testName, date, score });
-    count++;
+    rows.push({ student_id: inp.dataset.sid, test_name:testName, date, score });
   });
-  if(count===0){ toast('입력된 점수가 없습니다.'); return; }
-  DB.save();
+  if(rows.length===0){ toast('입력된 점수가 없습니다.'); return; }
+  const { data, error } = await sb.from('scores').insert(rows).select();
+  if(error){ toast('저장 실패: '+error.message); return; }
+  (data||[]).forEach(r=> DB.scores.push({ id:r.id, studentId:r.student_id, testName:r.test_name, date:r.date, score:r.score }));
   inputs.forEach(inp=> inp.value='');
-  toast(`${testName} · ${count}명의 점수를 저장했습니다.`);
+  toast(`${testName} · ${rows.length}명의 점수를 저장했습니다.`);
   renderScoreList();
   renderHeader();
 }
 
-function deleteScore(id){
+async function deleteScore(id){
+  const { error } = await sb.from('scores').delete().eq('id', id);
+  if(error){ toast('삭제 실패: '+error.message); return; }
   DB.scores = DB.scores.filter(x=>x.id!==id);
-  DB.save();
   toast('성적 기록을 삭제했습니다.');
   renderScoreList();
   renderHeader();
@@ -1487,21 +1649,129 @@ function renderAll(){
   renderDashboard();
 }
 
-/* ===== 초기화 ===== */
-document.getElementById('attDate').value = todayStr();
-document.getElementById('testDate').value = todayStr();
-document.getElementById('aDue').value = todayStr();
-document.getElementById('stDate').value = todayStr();
-document.getElementById('stAnchor').value = todayStr();
-// 엔터로 학생 등록
-['sName','sSchool'].forEach(id=>{
-  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addStudent(); });
-});
-// 엔터로 과제 등록
-['aTitle','aDesc'].forEach(id=>{
-  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addAssignment(); });
-});
-renderAll();
+/* ===== 로그인 / 로그아웃 ===== */
+function switchLoginRole(role){
+  document.querySelectorAll('.ltab').forEach(b=>b.classList.toggle('active', b.dataset.role===role));
+  document.getElementById('studentLogin').style.display = role==='student' ? '' : 'none';
+  document.getElementById('teacherLogin').style.display = role==='teacher' ? '' : 'none';
+  document.getElementById('loginMsg').textContent = '';
+}
+
+async function doStudentLogin(){
+  const name = document.getElementById('loginName').value.trim();
+  const code = document.getElementById('loginCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if(!name || !code){ msg.textContent='이름과 코드를 입력해 주세요.'; return; }
+  msg.textContent = '확인 중…';
+  const { data, error } = await sb.from('students').select('*').eq('name',name).eq('code',code);
+  if(error){ msg.textContent='서버 오류: '+error.message; return; }
+  if(!data || data.length===0){ msg.textContent='이름 또는 코드가 맞지 않습니다.'; return; }
+  const stu = data[0];
+  AUTH = { role:'student', name:stu.name, studentId:stu.id };
+  await enterApp();
+}
+
+async function doTeacherLogin(){
+  const name = document.getElementById('loginTName').value.trim();
+  const code = document.getElementById('loginTCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if(!name || !code){ msg.textContent='이름과 코드를 입력해 주세요.'; return; }
+  msg.textContent = '확인 중…';
+  const { data, error } = await sb.from('teachers').select('*').eq('code',code);
+  if(error){ msg.textContent='서버 오류: '+error.message; return; }
+  if(!data || data.length===0){ msg.textContent='선생님 코드가 맞지 않습니다.'; return; }
+  AUTH = { role:'teacher', name:name||data[0].name, studentId:null };
+  await enterApp();
+}
+
+function doLogout(){
+  AUTH = { role:null, name:null, studentId:null };
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginName').value='';
+  document.getElementById('loginCode').value='';
+  document.getElementById('loginTName').value='';
+  document.getElementById('loginTCode').value='';
+  document.getElementById('loginMsg').textContent='';
+}
+
+// 로그인 후 앱 진입
+async function enterApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appScreen').style.display='';
+  // 데이터 로드
+  await DB.load();
+  // 학생이면 본인 데이터만 남기기
+  if(AUTH.role==='student'){
+    const myId = AUTH.studentId;
+    DB.students = DB.students.filter(s=>s.id===myId);
+    DB.scores = DB.scores.filter(x=>x.studentId===myId);
+    DB.study = DB.study.filter(x=>x.studentId===myId);
+    Object.keys(DB.attendance).forEach(date=>{
+      Object.keys(DB.attendance[date]).forEach(sid=>{ if(sid!==myId) delete DB.attendance[date][sid]; });
+    });
+    Object.keys(DB.asgStatus).forEach(aid=>{
+      Object.keys(DB.asgStatus[aid]).forEach(sid=>{ if(sid!==myId) delete DB.asgStatus[aid][sid]; });
+    });
+    Object.keys(DB.planner).forEach(sid=>{ if(sid!==myId) delete DB.planner[sid]; });
+  }
+  applyRoleUI();
+  initAppOnce();
+  renderAll();
+}
+
+// 역할에 따라 화면 조정
+function applyRoleUI(){
+  const isStudent = AUTH.role==='student';
+  document.getElementById('currentUser').textContent =
+    isStudent ? `${AUTH.name} 학생` : `${AUTH.name} 선생님`;
+  // 학생이면 '학생 관리' 탭 숨김 (본인이 학생 명단을 관리할 필요 없음)
+  const stuTab = document.querySelector('.tab-btn[data-view="students"]');
+  if(stuTab) stuTab.style.display = isStudent ? 'none' : '';
+  // 학생이면 등록 학생 통계 숨김
+  document.getElementById('headerStats').style.display = isStudent ? 'none' : '';
+}
+
+// 앱 초기화는 한 번만
+let _appInited = false;
+function initAppOnce(){
+  if(_appInited) return;
+  _appInited = true;
+  document.getElementById('attDate').value = todayStr();
+  document.getElementById('testDate').value = todayStr();
+  document.getElementById('aDue').value = todayStr();
+  document.getElementById('stDate').value = todayStr();
+  document.getElementById('stAnchor').value = todayStr();
+  ['sName','sSchool','sCode'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') addStudent(); });
+  });
+  ['aTitle','aDesc'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') addAssignment(); });
+  });
+  // 로그인 입력창 엔터 지원
+  document.getElementById('loginCode').addEventListener('keydown', e=>{ if(e.key==='Enter') doStudentLogin(); });
+  document.getElementById('loginTCode').addEventListener('keydown', e=>{ if(e.key==='Enter') doTeacherLogin(); });
+}
+
+/* ===== 시작 ===== */
+// 서버 연결 확인
+(async function(){
+  const st = document.getElementById('loginStatus');
+  try{
+    const { error } = await sb.from('teachers').select('id').limit(1);
+    if(error) throw error;
+    st.textContent = '서버 연결됨 · 로그인해 주세요';
+    st.style.color = '#2f7d53';
+  }catch(e){
+    st.textContent = '서버 연결 실패 — 인터넷을 확인해 주세요';
+    st.style.color = '#c0483f';
+  }
+  // 로그인 입력창 엔터 (초기화 전이라도 작동하게)
+  const lc = document.getElementById('loginCode');
+  if(lc) lc.addEventListener('keydown', e=>{ if(e.key==='Enter') doStudentLogin(); });
+})();
 </script>
 </body>
 </html>
