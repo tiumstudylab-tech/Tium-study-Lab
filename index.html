@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js"></script>
 <style>
   /* ===== 로그인 화면 ===== */
   #loginScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
@@ -724,7 +724,9 @@
 /* ===== Supabase 설정 ===== */
 const SUPABASE_URL = 'https://xevyhxqfxjeizjbxrcyi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_PaVA6QeBPHofitjLtVIiag_pwcB2ciT';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
+});
 
 /* ===== 로그인 상태 ===== */
 // role: 'teacher' | 'student', studentId: 학생일 때 본인 id
