@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>티움스터디 · 통합 학생 관리</title>
+<style>
+  /* ===== 디자인 토큰 ===== */
+  :root{
+    --ink:#16241d;          /* 짙은 숲 그린 (본문 텍스트) */
+    --sprout:#2f7d53;       /* 새싹 그린 (브랜드 메인) */
+    --sprout-deep:#215c3d;  /* 진한 새싹 (호버/강조) */
+    --sprout-soft:#e8f3ec;  /* 연한 그린 배경 */
+    --bark:#8a7a63;         /* 흙/나무 톤 (보조) */
+    --paper:#fbfaf6;        /* 종이 배경 */
+    --card:#ffffff;
+    --line:#e6e4da;         /* 구분선 */
+    --present:#2f7d53;      /* 출석 */
+    --late:#c9862b;         /* 지각 */
+    --absent:#c0483f;       /* 결석 */
+    --done:#2f7d53;         /* 과제 완료 */
+    --doing:#c9862b;        /* 과제 진행중 */
+    --todo:#b0483f;         /* 과제 미제출 */
+    --amber-soft:#faf1e0;
+    --red-soft:#fbeceb;
+    --shadow:0 1px 2px rgba(22,36,29,.06), 0 8px 24px rgba(22,36,29,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== 상단 헤더 ===== */
+  header{
+    background:var(--ink);
+    color:#fff;
+    padding:22px 28px;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:14px;
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo-mark{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(135deg,var(--sprout),var(--sprout-deep));
+    display:grid;place-items:center;flex-shrink:0;
+    box-shadow:0 4px 14px rgba(47,125,83,.4);
+  }
+  .logo-mark svg{width:26px;height:26px}
+  .brand h1{font-size:20px;font-weight:800;letter-spacing:-.5px}
+  .brand p{font-size:12.5px;color:#a9c4b5;font-weight:500;letter-spacing:.3px}
+  .header-stats{display:flex;gap:26px}
+  .header-stats .hs{text-align:right}
+  .header-stats .num{font-size:22px;font-weight:800;color:#fff;line-height:1.1}
+  .header-stats .lbl{font-size:11.5px;color:#9db6a8;letter-spacing:.4px}
+
+  /* ===== 탭 네비게이션 ===== */
+  nav.tabs{
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    padding:0 28px;
+    display:flex;gap:4px;
+    position:sticky;top:0;z-index:20;
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    border:none;background:none;cursor:pointer;
+    font-family:inherit;font-size:15px;font-weight:600;
+    color:var(--bark);padding:16px 18px;
+    border-bottom:3px solid transparent;
+    white-space:nowrap;transition:color .15s;
+  }
+  nav.tabs button:hover{color:var(--sprout-deep)}
+  nav.tabs button.active{color:var(--sprout);border-bottom-color:var(--sprout)}
+
+  /* ===== 레이아웃 ===== */
+  main{max-width:1120px;margin:0 auto;padding:30px 28px 60px}
+  .view{display:none;animation:fade .3s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .section-head{margin-bottom:20px}
+  .section-head h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .section-head p{color:var(--bark);font-size:14px;margin-top:2px}
+
+  .grid{display:grid;gap:20px}
+  @media(min-width:860px){.grid-2{grid-template-columns:340px 1fr}}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:22px;
+  }
+  .card h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--sprout)}
+
+  /* ===== 폼 ===== */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .field input,.field select{
+    width:100%;padding:11px 13px;font-family:inherit;font-size:14.5px;
+    border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .field input:focus,.field select:focus{
+    outline:none;border-color:var(--sprout);
+    box-shadow:0 0 0 3px rgba(47,125,83,.12);
+  }
+  .btn{
+    font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+    border:none;border-radius:10px;padding:12px 18px;transition:background .15s,transform .05s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--sprout);color:#fff;width:100%}
+  .btn-primary:hover{background:var(--sprout-deep)}
+  .btn-ghost{background:var(--sprout-soft);color:var(--sprout-deep)}
+  .btn-ghost:hover{background:#d9ecdf}
+  .btn-sm{padding:7px 12px;font-size:13px;border-radius:8px}
+  .btn-danger{background:var(--red-soft);color:var(--absent)}
+  .btn-danger:hover{background:#f7dcda}
+
+  /* ===== 테이블 ===== */
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{
+    text-align:left;font-size:12px;font-weight:700;color:var(--bark);
+    letter-spacing:.3px;padding:10px 12px;border-bottom:2px solid var(--line);
+    text-transform:uppercase;white-space:nowrap;
+  }
+  tbody td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:#faf9f4}
+  tbody tr:last-child td{border-bottom:none}
+  .name-cell{font-weight:700}
+  .sub-cell{color:var(--bark);font-size:13px}
+
+  .pill{
+    display:inline-block;padding:3px 10px;border-radius:999px;
+    font-size:12px;font-weight:700;letter-spacing:.2px;
+  }
+  .pill-grade{background:var(--sprout-soft);color:var(--sprout-deep)}
+
+  /* ===== 출결 상태 버튼 ===== */
+  .att-group{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .att-btn{
+    font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+    border:1.5px solid var(--line);background:#fff;color:var(--bark);
+    padding:6px 12px;border-radius:8px;transition:all .12s;
+  }
+  .att-btn:hover{border-color:var(--sprout)}
+  .att-btn.on-present{background:var(--sprout-soft);border-color:var(--present);color:var(--present)}
+  .att-btn.on-late{background:var(--amber-soft);border-color:var(--late);color:var(--late)}
+  .att-btn.on-absent{background:var(--red-soft);border-color:var(--absent);color:var(--absent)}
+
+  .status-tag{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13.5px}
+  .status-tag .sq{width:9px;height:9px;border-radius:3px}
+  .t-present{color:var(--present)} .t-present .sq{background:var(--present)}
+  .t-late{color:var(--late)} .t-late .sq{background:var(--late)}
+  .t-absent{color:var(--absent)} .t-absent .sq{background:var(--absent)}
+  .t-none{color:#b6b2a5} .t-none .sq{background:#d6d3c8}
+
+  /* ===== 과제 카드 리스트 ===== */
+  .asg-item{
+    border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;
+    cursor:pointer;transition:border-color .15s,background .15s;
+  }
+  .asg-item:last-child{margin-bottom:0}
+  .asg-item:hover{border-color:var(--sprout);background:#faf9f4}
+  .asg-item.selected{border-color:var(--sprout);background:var(--sprout-soft)}
+  .asg-item .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .asg-item .title{font-weight:700;font-size:15px}
+  .asg-item .desc{font-size:13px;color:var(--bark);margin-top:3px}
+  .asg-item .due{font-size:12.5px;font-weight:700;white-space:nowrap}
+  .due-ok{color:var(--sprout-deep)} .due-soon{color:var(--late)} .due-over{color:var(--absent)}
+  .asg-progress{margin-top:10px}
+  .asg-bar{height:7px;border-radius:99px;background:#eceae0;overflow:hidden}
+  .asg-bar span{display:block;height:100%;background:var(--sprout);border-radius:99px;transition:width .3s}
+  .asg-progress .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--bark);margin-top:5px;font-weight:600}
+  .asg-del{border:none;background:var(--red-soft);color:var(--absent);font-family:inherit;font-weight:700;
+    font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer}
+  .asg-del:hover{background:#f7dcda}
+  .asg-meta{font-size:13px;color:var(--bark);margin:-6px 0 16px;font-weight:600}
+
+  .asg-btn{
+    font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+    border:1.5px solid var(--line);background:#fff;color:var(--bark);
+    padding:6px 12px;border-radius:8px;transition:all .12s;
+  }
+  .asg-btn:hover{border-color:var(--sprout)}
+  .asg-btn.on-done{background:var(--sprout-soft);border-color:var(--done);color:var(--done)}
+  .asg-btn.on-doing{background:var(--amber-soft);border-color:var(--doing);color:var(--doing)}
+  .asg-btn.on-todo{background:var(--red-soft);border-color:var(--todo);color:var(--todo)}
+  .t-done{color:var(--done)} .t-done .sq{background:var(--done)}
+  .t-doing{color:var(--doing)} .t-doing .sq{background:var(--doing)}
+  .t-todo{color:var(--todo)} .t-todo .sq{background:var(--todo)}
+
+  /* ===== 점수 입력 ===== */
+  .score-input{width:90px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;text-align:center}
+  .score-input:focus{outline:none;border-color:var(--sprout);box-shadow:0 0 0 3px rgba(47,125,83,.12)}
+
+  .score-badge{font-weight:800;font-size:15px}
+  .grade-A{color:#2f7d53} .grade-B{color:#3a7cae} .grade-C{color:#c9862b} .grade-D{color:#c0483f}
+
+  /* ===== 요약 카드 (대시보드) ===== */
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .stat-card .bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .stat-card .k{font-size:12.5px;color:var(--bark);font-weight:600;margin-bottom:4px}
+  .stat-card .v{font-size:28px;font-weight:800;letter-spacing:-1px}
+  .stat-card .u{font-size:14px;color:var(--bark);font-weight:600;margin-left:3px}
+
+  /* ===== 날짜 선택 바 ===== */
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow)}
+  .toolbar label{font-size:13px;font-weight:700;color:var(--ink)}
+  .toolbar input[type=date],.toolbar select{padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px}
+  .toolbar .spacer{flex:1}
+
+  /* ===== 빈 화면 ===== */
+  .empty{text-align:center;padding:44px 20px;color:var(--bark)}
+  .empty svg{width:52px;height:52px;opacity:.5;margin-bottom:12px}
+  .empty p{font-size:14.5px}
+  .empty .hint{font-size:13px;color:#b6b2a5;margin-top:4px}
+
+  /* ===== 토스트 ===== */
+  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:600;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:all .3s;z-index:100}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ===== 링크형 셀 액션 ===== */
+  .row-actions{display:flex;gap:6px;justify-content:flex-end}
+  footer{text-align:center;padding:24px;color:#b6b2a5;font-size:12.5px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="brand">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22V12"/><path d="M12 12C12 8 9 5 5 5c0 4 3 7 7 7Z"/><path d="M12 10c0-3 2.5-6 6-6 0 3.5-2.5 6-6 6Z"/>
+      </svg>
+    </div>
+    <div>
+      <h1>티움스터디 · 통합 학생 관리</h1>
+      <p>출결 · 테스트 결과 관리 시스템</p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="hs"><div class="num" id="hsStudents">0</div><div class="lbl">등록 학생</div></div>
+    <div class="hs"><div class="num" id="hsToday">0</div><div class="lbl">오늘 출석</div></div>
+    <div class="hs"><div class="num" id="hsAsg">0</div><div class="lbl">등록 과제</div></div>
+    <div class="hs"><div class="num" id="hsTests">0</div><div class="lbl">누적 성적</div></div>
+  </div>
+</header>
+
+<!-- 탭 -->
+<nav class="tabs">
+  <button class="tab-btn active" data-view="dashboard">현황 요약</button>
+  <button class="tab-btn" data-view="students">학생 관리</button>
+  <button class="tab-btn" data-view="attendance">출결 체크</button>
+  <button class="tab-btn" data-view="assignments">과제 관리</button>
+  <button class="tab-btn" data-view="scores">테스트 결과</button>
+</nav>
+
+<main>
+
+  <!-- ===== 현황 요약 ===== -->
+  <section class="view active" id="view-dashboard">
+    <div class="section-head">
+      <h2>현황 요약</h2>
+      <p>등록 학생과 오늘의 출결, 성적 현황을 한눈에 확인합니다.</p>
+    </div>
+    <div class="stat-row" id="statRow"></div>
+    <div class="card">
+      <h3><span class="dot"></span>학생별 요약</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>오늘 출결</th><th>과제 완료</th><th>응시 횟수</th><th>평균 점수</th></tr></thead>
+          <tbody id="dashBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="dashEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/><path d="M12 14c-5 0-8 2.5-8 6h16c0-3.5-3-6-8-6Z"/></svg>
+        <p>아직 등록된 학생이 없습니다.</p>
+        <p class="hint">'학생 관리' 탭에서 첫 학생을 등록해 주세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 학생 관리 ===== -->
+  <section class="view" id="view-students">
+    <div class="section-head">
+      <h2>학생 관리</h2>
+      <p>학생을 등록하고 명단을 관리합니다. 이름·학년·학교를 입력해 주세요.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3><span class="dot"></span>학생 등록</h3>
+        <div class="field">
+          <label for="sName">이름</label>
+          <input id="sName" type="text" placeholder="예) 김하늘" maxlength="20">
+        </div>
+        <div class="field">
+          <label for="sGrade">학년</label>
+          <select id="sGrade">
+            <option value="">학년 선택</option>
+            <optgroup label="초등">
+              <option>초1</option><option>초2</option><option>초3</option><option>초4</option><option>초5</option><option>초6</option>
+            </optgroup>
+            <optgroup label="중등">
+              <option>중1</option><option>중2</option><option>중3</option>
+            </optgroup>
+            <optgroup label="고등">
+              <option>고1</option><option>고2</option><option>고3</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sSchool">학교</label>
+          <input id="sSchool" type="text" placeholder="예) 티움중학교" maxlength="30">
+        </div>
+        <button class="btn btn-primary" onclick="addStudent()">학생 등록하기</button>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot"></span>학생 명단 <span id="stuCount" style="color:var(--bark);font-weight:600;font-size:13px"></span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이름</th><th>학년</th><th>학교</th><th>등록일</th><th style="text-align:right">관리</th></tr></thead>
+            <tbody id="studentBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="studentEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
+          <p>등록된 학생이 없습니다.</p>
+          <p class="hint">왼쪽 양식을 작성해 학생을 추가해 주세요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 출결 체크 ===== -->
+  <section class="view" id="view-attendance">
+    <div class="section-head">
+      <h2>출결 체크</h2>
+      <p>날짜를 선택하고 학생별 출석·지각·결석을 기록합니다.</p>
+    </div>
+    <div class="toolbar">
+      <label for="attDate">기준 날짜</label>
+      <input id="attDate" type="date" onchange="renderAttendance()">
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" onclick="markAllPresent()">전체 출석 처리</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span><span id="attDateLabel">오늘</span> 출결 현황</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>출결 선택</th><th>기록 상태</th></tr></thead>
+          <tbody id="attBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="attEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <p>등록된 학생이 없습니다.</p>
+        <p class="hint">'학생 관리' 탭에서 학생을 먼저 등록해 주세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 과제 관리 ===== -->
+  <section class="view" id="view-assignments">
+    <div class="section-head">
+      <h2>과제 관리</h2>
+      <p>과제를 등록하고, 과제별로 학생들의 수행 여부를 체크합니다.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3><span class="dot"></span>과제 등록</h3>
+        <div class="field">
+          <label for="aTitle">과제명</label>
+          <input id="aTitle" type="text" placeholder="예) 수학 3단원 문제집 20p" maxlength="50">
+        </div>
+        <div class="field">
+          <label for="aDue">마감일</label>
+          <input id="aDue" type="date">
+        </div>
+        <div class="field">
+          <label for="aDesc">안내 사항 (선택)</label>
+          <input id="aDesc" type="text" placeholder="예) 틀린 문제는 오답노트까지" maxlength="80">
+        </div>
+        <button class="btn btn-primary" onclick="addAssignment()">과제 등록하기</button>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot"></span>과제 목록 <span id="asgCount" style="color:var(--bark);font-weight:600;font-size:13px"></span></h3>
+        <div id="asgList"></div>
+        <div class="empty" id="asgEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+          <p>등록된 과제가 없습니다.</p>
+          <p class="hint">왼쪽 양식으로 첫 과제를 등록해 주세요.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="asgCheckCard" style="margin-top:20px;display:none">
+      <h3><span class="dot"></span>수행 체크 · <span id="asgCheckTitle" style="color:var(--sprout-deep)"></span></h3>
+      <div class="asg-meta" id="asgCheckMeta"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>수행 상태</th><th>기록</th></tr></thead>
+          <tbody id="asgCheckBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 테스트 결과 ===== -->
+  <section class="view" id="view-scores">
+    <div class="section-head">
+      <h2>테스트 결과</h2>
+      <p>시험명을 입력하고 학생별 점수를 기록·확인합니다.</p>
+    </div>
+    <div class="toolbar">
+      <label for="testName">시험명</label>
+      <input id="testName" type="text" placeholder="예) 3월 모의고사" style="min-width:180px" maxlength="30">
+      <label for="testDate">응시일</label>
+      <input id="testDate" type="date">
+      <div class="spacer"></div>
+      <button class="btn btn-primary btn-sm" style="width:auto" onclick="saveScores()">점수 일괄 저장</button>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <h3><span class="dot"></span>점수 입력 (0 ~ 100)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>점수 입력</th></tr></thead>
+          <tbody id="scoreInputBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="scoreInputEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 15h6"/></svg>
+        <p>등록된 학생이 없습니다.</p>
+        <p class="hint">'학생 관리' 탭에서 학생을 먼저 등록해 주세요.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>성적 목록</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>응시일</th><th>시험명</th><th>이름</th><th>학년</th><th>점수</th><th>등급</th><th style="text-align:right">관리</th></tr></thead>
+          <tbody id="scoreListBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="scoreListEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        <p>기록된 성적이 없습니다.</p>
+        <p class="hint">위에서 점수를 입력하고 저장해 주세요.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>티움스터디 통합 학생 관리 시스템 · 모든 데이터는 사용 중인 브라우저에만 안전하게 저장됩니다</footer>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   데이터 저장소 (localStorage 기반)
+   students : [{id, name, grade, school, createdAt}]
+   attendance : { "YYYY-MM-DD": { studentId: "present|late|absent" } }
+   scores : [{id, studentId, testName, date, score}]
+========================================================= */
+const DB = {
+  students: JSON.parse(localStorage.getItem('tium_students') || '[]'),
+  attendance: JSON.parse(localStorage.getItem('tium_attendance') || '{}'),
+  scores: JSON.parse(localStorage.getItem('tium_scores') || '[]'),
+  assignments: JSON.parse(localStorage.getItem('tium_assignments') || '[]'),
+  // asgStatus: { assignmentId: { studentId: 'done|doing|todo' } }
+  asgStatus: JSON.parse(localStorage.getItem('tium_asgStatus') || '{}'),
+  save(){
+    localStorage.setItem('tium_students', JSON.stringify(this.students));
+    localStorage.setItem('tium_attendance', JSON.stringify(this.attendance));
+    localStorage.setItem('tium_scores', JSON.stringify(this.scores));
+    localStorage.setItem('tium_assignments', JSON.stringify(this.assignments));
+    localStorage.setItem('tium_asgStatus', JSON.stringify(this.asgStatus));
+  }
+};
+
+const ATT_LABEL = {present:'출석', late:'지각', absent:'결석'};
+const ASG_LABEL = {done:'완료', doing:'진행중', todo:'미제출'};
+let selectedAsgId = null;  // 현재 체크 중인 과제
+
+/* ===== 유틸 ===== */
+function todayStr(){
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off*60000).toISOString().slice(0,10);
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function fmtDate(s){
+  if(!s) return '-';
+  const [y,m,d] = s.split('-');
+  return `${y}.${m}.${d}`;
+}
+function gradeInfo(score){
+  if(score>=90) return {letter:'A', cls:'grade-A'};
+  if(score>=80) return {letter:'B', cls:'grade-B'};
+  if(score>=70) return {letter:'C', cls:'grade-C'};
+  return {letter:'D', cls:'grade-D'};
+}
+
+/* ===== 탭 전환 ===== */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    renderAll();
+  });
+});
+
+/* ===== 학생 관리 ===== */
+function addStudent(){
+  const name = document.getElementById('sName').value.trim();
+  const grade = document.getElementById('sGrade').value;
+  const school = document.getElementById('sSchool').value.trim();
+  if(!name){ toast('이름을 입력해 주세요.'); document.getElementById('sName').focus(); return; }
+  if(!grade){ toast('학년을 선택해 주세요.'); document.getElementById('sGrade').focus(); return; }
+  DB.students.push({ id:uid(), name, grade, school: school || '-', createdAt: todayStr() });
+  DB.save();
+  document.getElementById('sName').value = '';
+  document.getElementById('sGrade').value = '';
+  document.getElementById('sSchool').value = '';
+  document.getElementById('sName').focus();
+  toast(`${name} 학생이 등록되었습니다.`);
+  renderAll();
+}
+
+function deleteStudent(id){
+  const s = DB.students.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`${s.name} 학생을 삭제하시겠습니까?\n관련 출결·성적 기록도 함께 삭제됩니다.`)) return;
+  DB.students = DB.students.filter(x=>x.id!==id);
+  DB.scores = DB.scores.filter(x=>x.studentId!==id);
+  Object.keys(DB.attendance).forEach(date=>{ delete DB.attendance[date][id]; });
+  DB.save();
+  toast(`${s.name} 학생이 삭제되었습니다.`);
+  renderAll();
+}
+
+function renderStudents(){
+  const body = document.getElementById('studentBody');
+  const empty = document.getElementById('studentEmpty');
+  document.getElementById('stuCount').textContent = DB.students.length ? `· 총 ${DB.students.length}명` : '';
+  if(DB.students.length===0){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = DB.students.map(s=>`
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td class="sub-cell">${esc(s.school)}</td>
+      <td class="sub-cell">${fmtDate(s.createdAt)}</td>
+      <td><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">삭제</button></div></td>
+    </tr>`).join('');
+}
+
+/* ===== 출결 ===== */
+function setAttendance(studentId, status){
+  const date = document.getElementById('attDate').value || todayStr();
+  if(!DB.attendance[date]) DB.attendance[date] = {};
+  // 같은 상태 다시 누르면 해제(미기록)
+  if(DB.attendance[date][studentId] === status){
+    delete DB.attendance[date][studentId];
+  } else {
+    DB.attendance[date][studentId] = status;
+  }
+  DB.save();
+  renderAttendance();
+  renderHeader();
+}
+
+function markAllPresent(){
+  const date = document.getElementById('attDate').value || todayStr();
+  if(DB.students.length===0){ toast('등록된 학생이 없습니다.'); return; }
+  if(!DB.attendance[date]) DB.attendance[date] = {};
+  DB.students.forEach(s=>{ DB.attendance[date][s.id] = 'present'; });
+  DB.save();
+  toast('전체 학생을 출석 처리했습니다.');
+  renderAttendance();
+  renderHeader();
+}
+
+function renderAttendance(){
+  const date = document.getElementById('attDate').value || todayStr();
+  const dayMap = DB.attendance[date] || {};
+  document.getElementById('attDateLabel').textContent = fmtDate(date);
+  const body = document.getElementById('attBody');
+  const empty = document.getElementById('attEmpty');
+  if(DB.students.length===0){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = DB.students.map(s=>{
+    const cur = dayMap[s.id] || '';
+    const tagCls = cur ? 't-'+cur : 't-none';
+    const tagTxt = cur ? ATT_LABEL[cur] : '미기록';
+    return `
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td>
+        <div class="att-group">
+          <button class="att-btn ${cur==='present'?'on-present':''}" onclick="setAttendance('${s.id}','present')">출석</button>
+          <button class="att-btn ${cur==='late'?'on-late':''}" onclick="setAttendance('${s.id}','late')">지각</button>
+          <button class="att-btn ${cur==='absent'?'on-absent':''}" onclick="setAttendance('${s.id}','absent')">결석</button>
+        </div>
+      </td>
+      <td><span class="status-tag ${tagCls}"><span class="sq"></span>${tagTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== 과제 관리 ===== */
+function addAssignment(){
+  const title = document.getElementById('aTitle').value.trim();
+  const due = document.getElementById('aDue').value;
+  const desc = document.getElementById('aDesc').value.trim();
+  if(!title){ toast('과제명을 입력해 주세요.'); document.getElementById('aTitle').focus(); return; }
+  const id = uid();
+  DB.assignments.push({ id, title, due: due || '', desc, createdAt: todayStr() });
+  DB.asgStatus[id] = {};
+  DB.save();
+  document.getElementById('aTitle').value = '';
+  document.getElementById('aDesc').value = '';
+  document.getElementById('aTitle').focus();
+  toast('과제가 등록되었습니다.');
+  selectedAsgId = id;   // 등록 즉시 체크 화면으로 연결
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+function deleteAssignment(id, ev){
+  if(ev) ev.stopPropagation();
+  const a = DB.assignments.find(x=>x.id===id);
+  if(!a) return;
+  if(!confirm(`'${a.title}' 과제를 삭제하시겠습니까?\n학생들의 수행 기록도 함께 삭제됩니다.`)) return;
+  DB.assignments = DB.assignments.filter(x=>x.id!==id);
+  delete DB.asgStatus[id];
+  if(selectedAsgId===id) selectedAsgId = null;
+  DB.save();
+  toast('과제가 삭제되었습니다.');
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+function selectAssignment(id){
+  selectedAsgId = id;
+  renderAssignments();
+  renderAsgCheck();
+}
+
+function setAsgStatus(asgId, studentId, status){
+  if(!DB.asgStatus[asgId]) DB.asgStatus[asgId] = {};
+  if(DB.asgStatus[asgId][studentId] === status){
+    delete DB.asgStatus[asgId][studentId];  // 다시 누르면 해제
+  } else {
+    DB.asgStatus[asgId][studentId] = status;
+  }
+  DB.save();
+  renderAssignments();
+  renderAsgCheck();
+  renderHeader();
+}
+
+// 과제 진행률 계산 (완료 학생 수 / 전체 학생 수)
+function asgProgress(asgId){
+  const total = DB.students.length;
+  if(total===0) return {done:0, total:0, pct:0};
+  const map = DB.asgStatus[asgId] || {};
+  const done = DB.students.filter(s=>map[s.id]==='done').length;
+  return {done, total, pct: Math.round(done/total*100)};
+}
+
+// 마감일 상태 (여유/임박/지남)
+function dueClass(due){
+  if(!due) return {cls:'due-ok', txt:'마감일 없음'};
+  const today = todayStr();
+  const diff = (new Date(due) - new Date(today)) / 86400000;
+  if(diff < 0) return {cls:'due-over', txt:`마감 지남 (${fmtDate(due)})`};
+  if(diff <= 2) return {cls:'due-soon', txt:`마감 임박 · ${fmtDate(due)}`};
+  return {cls:'due-ok', txt:`마감 ${fmtDate(due)}`};
+}
+
+function renderAssignments(){
+  const list = document.getElementById('asgList');
+  const empty = document.getElementById('asgEmpty');
+  document.getElementById('asgCount').textContent = DB.assignments.length ? `· 총 ${DB.assignments.length}건` : '';
+  if(DB.assignments.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const sorted = [...DB.assignments].sort((a,b)=> (b.createdAt+b.id).localeCompare(a.createdAt+a.id));
+  list.innerHTML = sorted.map(a=>{
+    const p = asgProgress(a.id);
+    const d = dueClass(a.due);
+    return `
+    <div class="asg-item ${selectedAsgId===a.id?'selected':''}" onclick="selectAssignment('${a.id}')">
+      <div class="top">
+        <div>
+          <div class="title">${esc(a.title)}</div>
+          ${a.desc ? `<div class="desc">${esc(a.desc)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <span class="due ${d.cls}">${d.txt}</span>
+          <button class="asg-del" onclick="deleteAssignment('${a.id}',event)">삭제</button>
+        </div>
+      </div>
+      <div class="asg-progress">
+        <div class="asg-bar"><span style="width:${p.pct}%"></span></div>
+        <div class="lbl"><span>완료 ${p.done} / ${p.total}명</span><span>${p.pct}%</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAsgCheck(){
+  const card = document.getElementById('asgCheckCard');
+  if(!selectedAsgId || !DB.assignments.find(a=>a.id===selectedAsgId)){
+    card.style.display='none';
+    return;
+  }
+  const a = DB.assignments.find(x=>x.id===selectedAsgId);
+  card.style.display='block';
+  document.getElementById('asgCheckTitle').textContent = a.title;
+  const p = asgProgress(a.id);
+  const d = dueClass(a.due);
+  document.getElementById('asgCheckMeta').textContent =
+    `${d.txt}　·　완료 ${p.done} / ${p.total}명 (${p.pct}%)`;
+
+  const body = document.getElementById('asgCheckBody');
+  if(DB.students.length===0){
+    body.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--bark);padding:24px">등록된 학생이 없습니다. 먼저 학생을 등록해 주세요.</td></tr>`;
+    return;
+  }
+  const map = DB.asgStatus[a.id] || {};
+  body.innerHTML = DB.students.map(s=>{
+    const cur = map[s.id] || '';
+    const tagCls = cur ? 't-'+cur : 't-none';
+    const tagTxt = cur ? ASG_LABEL[cur] : '미확인';
+    return `
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td>
+        <div class="att-group">
+          <button class="asg-btn ${cur==='done'?'on-done':''}" onclick="setAsgStatus('${a.id}','${s.id}','done')">완료</button>
+          <button class="asg-btn ${cur==='doing'?'on-doing':''}" onclick="setAsgStatus('${a.id}','${s.id}','doing')">진행중</button>
+          <button class="asg-btn ${cur==='todo'?'on-todo':''}" onclick="setAsgStatus('${a.id}','${s.id}','todo')">미제출</button>
+        </div>
+      </td>
+      <td><span class="status-tag ${tagCls}"><span class="sq"></span>${tagTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== 테스트 결과 ===== */
+function renderScoreInputs(){
+  const body = document.getElementById('scoreInputBody');
+  const empty = document.getElementById('scoreInputEmpty');
+  if(DB.students.length===0){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = DB.students.map(s=>`
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td><input class="score-input" type="number" min="0" max="100" placeholder="점수" data-sid="${s.id}"></td>
+    </tr>`).join('');
+}
+
+function saveScores(){
+  const testName = document.getElementById('testName').value.trim();
+  const date = document.getElementById('testDate').value || todayStr();
+  if(!testName){ toast('시험명을 입력해 주세요.'); document.getElementById('testName').focus(); return; }
+  if(DB.students.length===0){ toast('등록된 학생이 없습니다.'); return; }
+  const inputs = document.querySelectorAll('#scoreInputBody .score-input');
+  let count = 0;
+  inputs.forEach(inp=>{
+    const val = inp.value.trim();
+    if(val===''){ return; }
+    let score = Math.round(Number(val));
+    if(isNaN(score)) return;
+    score = Math.max(0, Math.min(100, score));
+    DB.scores.push({ id:uid(), studentId: inp.dataset.sid, testName, date, score });
+    count++;
+  });
+  if(count===0){ toast('입력된 점수가 없습니다.'); return; }
+  DB.save();
+  inputs.forEach(inp=> inp.value='');
+  toast(`${testName} · ${count}명의 점수를 저장했습니다.`);
+  renderScoreList();
+  renderHeader();
+}
+
+function deleteScore(id){
+  DB.scores = DB.scores.filter(x=>x.id!==id);
+  DB.save();
+  toast('성적 기록을 삭제했습니다.');
+  renderScoreList();
+  renderHeader();
+}
+
+function renderScoreList(){
+  const body = document.getElementById('scoreListBody');
+  const empty = document.getElementById('scoreListEmpty');
+  if(DB.scores.length===0){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const sorted = [...DB.scores].sort((a,b)=> (b.date+b.id).localeCompare(a.date+a.id));
+  body.innerHTML = sorted.map(sc=>{
+    const stu = DB.students.find(s=>s.id===sc.studentId);
+    const name = stu ? stu.name : '(삭제된 학생)';
+    const grade = stu ? stu.grade : '-';
+    const g = gradeInfo(sc.score);
+    return `
+    <tr>
+      <td class="sub-cell">${fmtDate(sc.date)}</td>
+      <td>${esc(sc.testName)}</td>
+      <td class="name-cell">${esc(name)}</td>
+      <td><span class="pill pill-grade">${esc(grade)}</span></td>
+      <td><span class="score-badge ${g.cls}">${sc.score}점</span></td>
+      <td><span class="score-badge ${g.cls}">${g.letter}</span></td>
+      <td><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="deleteScore('${sc.id}')">삭제</button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== 대시보드 / 헤더 요약 ===== */
+function renderHeader(){
+  const today = todayStr();
+  const dayMap = DB.attendance[today] || {};
+  const presentToday = Object.values(dayMap).filter(v=>v==='present').length;
+  document.getElementById('hsStudents').textContent = DB.students.length;
+  document.getElementById('hsToday').textContent = presentToday;
+  document.getElementById('hsAsg').textContent = DB.assignments.length;
+  document.getElementById('hsTests').textContent = DB.scores.length;
+}
+
+function renderDashboard(){
+  const today = todayStr();
+  const dayMap = DB.attendance[today] || {};
+  const present = Object.values(dayMap).filter(v=>v==='present').length;
+  const late = Object.values(dayMap).filter(v=>v==='late').length;
+  const absent = Object.values(dayMap).filter(v=>v==='absent').length;
+  const avg = DB.scores.length ? Math.round(DB.scores.reduce((a,s)=>a+s.score,0)/DB.scores.length) : 0;
+  // 진행 중 과제: 마감일이 안 지났거나 마감일 없는 과제
+  const ongoing = DB.assignments.filter(a=>{
+    if(!a.due) return true;
+    return (new Date(a.due) - new Date(today)) / 86400000 >= 0;
+  }).length;
+
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card"><div class="bar" style="background:var(--sprout)"></div><div class="k">등록 학생</div><div class="v">${DB.students.length}<span class="u">명</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:var(--present)"></div><div class="k">오늘 출석</div><div class="v">${present}<span class="u">명</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:var(--late)"></div><div class="k">오늘 지각</div><div class="v">${late}<span class="u">명</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:var(--absent)"></div><div class="k">오늘 결석</div><div class="v">${absent}<span class="u">명</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:var(--doing)"></div><div class="k">진행 중 과제</div><div class="v">${ongoing}<span class="u">건</span></div></div>
+    <div class="stat-card"><div class="bar" style="background:#3a7cae"></div><div class="k">전체 평균 점수</div><div class="v">${avg}<span class="u">점</span></div></div>
+  `;
+
+  const body = document.getElementById('dashBody');
+  const empty = document.getElementById('dashEmpty');
+  if(DB.students.length===0){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = DB.students.map(s=>{
+    const att = dayMap[s.id];
+    const tagCls = att ? 't-'+att : 't-none';
+    const tagTxt = att ? ATT_LABEL[att] : '미기록';
+    const myScores = DB.scores.filter(x=>x.studentId===s.id);
+    const cnt = myScores.length;
+    const mAvg = cnt ? Math.round(myScores.reduce((a,x)=>a+x.score,0)/cnt) : null;
+    // 과제 완료 현황: 완료한 과제 수 / 전체 과제 수
+    const asgTotal = DB.assignments.length;
+    const asgDone = DB.assignments.filter(a => (DB.asgStatus[a.id]||{})[s.id]==='done').length;
+    const asgCell = asgTotal
+      ? `<span class="score-badge ${asgDone===asgTotal?'grade-A':(asgDone===0?'grade-D':'grade-C')}">${asgDone}/${asgTotal}</span>`
+      : '<span class="sub-cell">-</span>';
+    return `
+    <tr>
+      <td class="name-cell">${esc(s.name)}</td>
+      <td><span class="pill pill-grade">${esc(s.grade)}</span></td>
+      <td class="sub-cell">${esc(s.school)}</td>
+      <td><span class="status-tag ${tagCls}"><span class="sq"></span>${tagTxt}</span></td>
+      <td>${asgCell}</td>
+      <td class="sub-cell">${cnt}회</td>
+      <td>${mAvg!==null ? `<span class="score-badge ${gradeInfo(mAvg).cls}">${mAvg}점</span>` : '<span class="sub-cell">-</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== 전체 렌더 ===== */
+function renderAll(){
+  renderHeader();
+  renderStudents();
+  renderAttendance();
+  renderAssignments();
+  renderAsgCheck();
+  renderScoreInputs();
+  renderScoreList();
+  renderDashboard();
+}
+
+/* ===== 초기화 ===== */
+document.getElementById('attDate').value = todayStr();
+document.getElementById('testDate').value = todayStr();
+document.getElementById('aDue').value = todayStr();
+// 엔터로 학생 등록
+['sName','sSchool'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addStudent(); });
+});
+// 엔터로 과제 등록
+['aTitle','aDesc'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') addAssignment(); });
+});
+renderAll();
+</script>
+</body>
+</html>
