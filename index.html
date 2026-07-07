@@ -703,6 +703,23 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:20px" id="scoreChartCard">
+      <h3><span class="dot"></span>점수 변동 그래프</h3>
+      <div class="study-toolbar" style="margin-bottom:16px">
+        <div class="st-field">
+          <label for="scoreChartStudent">학생 선택</label>
+          <select id="scoreChartStudent" onchange="renderScoreChart()"></select>
+        </div>
+      </div>
+      <div id="scoreChartWrap"></div>
+      <div class="study-legend" id="scoreChartLegend"></div>
+      <div class="empty" id="scoreChartEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 4-6"/></svg>
+        <p>표시할 성적이 없습니다.</p>
+        <p class="hint">2회차 이상 입력하면 변동 그래프가 나옵니다.</p>
+      </div>
+    </div>
+
     <div class="card">
       <h3><span class="dot"></span>성적 목록</h3>
       <div class="table-wrap">
@@ -1604,6 +1621,82 @@ function renderScoreList(){
   }).join('');
 }
 
+// 점수 변동 선그래프 (과목별)
+function renderScoreChart(){
+  const sel = document.getElementById('scoreChartStudent');
+  const wrap = document.getElementById('scoreChartWrap');
+  const legendEl = document.getElementById('scoreChartLegend');
+  const empty = document.getElementById('scoreChartEmpty');
+
+  // 학생 드롭다운 채우기 (현재 선택 유지)
+  const prev = sel.value;
+  sel.innerHTML = DB.students.map(s=>`<option value="${s.id}">${esc(s.name)} (${esc(s.grade)})</option>`).join('');
+  if(prev && DB.students.find(s=>s.id===prev)) sel.value = prev;
+  const sid = sel.value || (DB.students[0] && DB.students[0].id);
+
+  if(!sid){ wrap.innerHTML=''; legendEl.innerHTML=''; empty.style.display='block'; return; }
+
+  // 해당 학생의 회차별 과목 점수 모으기
+  const myScores = DB.scores.filter(x=>x.studentId===sid);
+  // 회차키(회차명|날짜)로 그룹, 날짜순 정렬
+  const roundMap = {};
+  myScores.forEach(sc=>{
+    const key = sc.date+'|'+sc.testName;
+    if(!roundMap[key]) roundMap[key] = { date:sc.date, name:sc.testName, subjects:{} };
+    roundMap[key].subjects[sc.subject] = sc.score;
+  });
+  const rounds = Object.values(roundMap).sort((a,b)=> (a.date+a.name).localeCompare(b.date+b.name));
+
+  if(rounds.length<2){ wrap.innerHTML=''; legendEl.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  const W=560, H=320, padL=40, padR=20, padT=20, padB=54;
+  const chartW=W-padL-padR, chartH=H-padT-padB;
+  const n=rounds.length;
+  const xOf = i => padL + (n===1?chartW/2 : chartW*i/(n-1));
+  const yOf = v => padT + chartH - chartH*(v/100);
+
+  let svg=`<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  // Y격자 (0~100, 20단위)
+  for(let v=0; v<=100; v+=20){
+    const y=yOf(v);
+    svg+=`<line class="chart-grid" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+    svg+=`<text class="bar-yaxis" x="${padL-8}" y="${y+4}" text-anchor="end">${v}</text>`;
+  }
+  // X축 회차 라벨
+  rounds.forEach((r,i)=>{
+    const x=xOf(i);
+    const label = r.name.length>6 ? r.name.slice(0,6) : r.name;
+    svg+=`<text class="bar-day-label" x="${x}" y="${H-padB+22}" text-anchor="middle" transform="rotate(0 ${x} ${H-padB+22})">${esc(label)}</text>`;
+  });
+
+  // 과목별 선
+  const usedSubjects=[];
+  TW_SUBJECTS.forEach(subj=>{
+    const pts=[];
+    rounds.forEach((r,i)=>{
+      const v=r.subjects[subj];
+      if(v!==undefined) pts.push({x:xOf(i), y:yOf(v), v, i});
+    });
+    if(pts.length===0) return;
+    usedSubjects.push(subj);
+    const color=subjColor(subj);
+    // 선 경로
+    let dpath='';
+    pts.forEach((p,k)=>{ dpath += (k===0?'M':'L') + p.x.toFixed(1)+' '+p.y.toFixed(1)+' '; });
+    svg+=`<path d="${dpath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // 점
+    pts.forEach(p=>{
+      svg+=`<circle cx="${p.x}" cy="${p.y}" r="4" fill="#fff" stroke="${color}" stroke-width="2.5"><title>${subj} ${p.v}점</title></circle>`;
+    });
+  });
+  svg+=`</svg>`;
+  wrap.innerHTML=svg;
+
+  // 범례
+  legendEl.innerHTML = usedSubjects.map(s=>`<span class="lg"><span class="sw" style="background:${subjColor(s)}"></span>${s}</span>`).join('');
+}
+
 /* ===== 대시보드 / 헤더 요약 ===== */
 function renderHeader(){
   const today = todayStr();
@@ -1678,6 +1771,7 @@ function renderAll(){
   renderStudy();
   renderScoreInputs();
   renderScoreList();
+  renderScoreChart();
   renderDashboard();
 }
 
@@ -1772,6 +1866,9 @@ function applyRoleUI(){
   const scoreInputCard = document.getElementById('scoreInputCard');
   if(scoreToolbar) scoreToolbar.style.display = isStudent ? 'none' : '';
   if(scoreInputCard) scoreInputCard.style.display = isStudent ? 'none' : '';
+  // 그래프 학생선택은 학생이면 숨김(본인 것만 표시됨)
+  const scoreChartTb = document.querySelector('#scoreChartCard .study-toolbar');
+  if(scoreChartTb) scoreChartTb.style.display = isStudent ? 'none' : '';
 
   // 학생 안내 문구 조정
   const attHead = document.querySelector('#view-attendance .section-head p');
